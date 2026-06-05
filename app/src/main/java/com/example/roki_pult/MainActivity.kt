@@ -13,7 +13,7 @@ import android.bluetooth.le.BluetoothLeScanner
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-// Removed import android.location.LocationManager
+import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -88,12 +88,14 @@ class MainActivity : AppCompatActivity() {
     private val neededPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
             Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT
+            Manifest.permission.BLUETOOTH_CONNECT,
+            Manifest.permission.ACCESS_FINE_LOCATION
         )
     } else {
         arrayOf(
             Manifest.permission.BLUETOOTH,
-            Manifest.permission.BLUETOOTH_ADMIN
+            Manifest.permission.BLUETOOTH_ADMIN,
+            Manifest.permission.ACCESS_FINE_LOCATION
         )
     }
 
@@ -279,7 +281,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    // Removed function isLocationServiceEnabled()
+    private fun isLocationServiceEnabled(): Boolean {
+        val locationManager = getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER) || locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
+    }
 
     private fun scanLeDevice() {
         if (bluetoothAdapter == null) {
@@ -291,10 +296,12 @@ class MainActivity : AppCompatActivity() {
             bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
         }
 
-        // Only check for Bluetooth permissions
-        if (!checkPermissions()) {
-            Toast.makeText(this, "Проверьте разрешения на работу с Bluetooth", Toast.LENGTH_LONG).show()
+        if (!checkPermissions() || !isLocationServiceEnabled()) {
+            Toast.makeText(this, "Проверьте разрешения и включите геолокацию", Toast.LENGTH_LONG).show()
             checkAndRequestPermissions()
+            if (!isLocationServiceEnabled()) {
+                startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            }
             return
         }
 
@@ -413,8 +420,7 @@ class MainActivity : AppCompatActivity() {
     private fun onPermissionsGranted() {
         val adapter = bluetoothAdapter ?: return
         if (!adapter.isEnabled) {
-            // Corrected permission constant name for Bluetooth Connect check
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             requestBluetooth.launch(enableBtIntent)
         }
