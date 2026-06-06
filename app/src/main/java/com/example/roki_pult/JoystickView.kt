@@ -62,6 +62,24 @@ class JoystickView @JvmOverloads constructor(
 
     init {
         setBackgroundColor(Color.TRANSPARENT)
+        setWillNotDraw(false)
+        setLayerType(View.LAYER_TYPE_SOFTWARE, null)
+    }
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        val widthMode = MeasureSpec.getMode(widthMeasureSpec)
+        val widthSize = MeasureSpec.getSize(widthMeasureSpec)
+        val heightMode = MeasureSpec.getMode(heightMeasureSpec)
+        val heightSize = MeasureSpec.getSize(heightMeasureSpec)
+
+        val size = if (widthMode == MeasureSpec.EXACTLY && heightMode == MeasureSpec.EXACTLY) {
+            min(widthSize, heightSize)
+        } else if (widthSize > 0 && heightSize > 0) {
+            min(widthSize, heightSize)
+        } else {
+            600 // Гарантированный размер, если система не передала данные
+        }
+        setMeasuredDimension(size, size)
     }
 
     fun setOnMoveListener(listener: OnMoveListener) {
@@ -91,6 +109,14 @@ class JoystickView @JvmOverloads constructor(
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
+        
+        // Debug frame for visibility
+        val debugPaint = Paint().apply {
+            color = Color.parseColor("#33FFFFFF")
+            style = Paint.Style.STROKE
+            strokeWidth = 1f
+        }
+        canvas.drawRect(0f, 0f, width.toFloat(), height.toFloat(), debugPaint)
 
         if (isInEditMode) {
             val previewPaint = Paint().apply { color = Color.LTGRAY; style = Paint.Style.FILL }

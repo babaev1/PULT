@@ -70,6 +70,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var joystickViewRight: JoystickView
     private lateinit var scanProgressBar: ProgressBar
 
+    private lateinit var pairingPanel: View
+    private lateinit var controlPanel: View
+    private lateinit var btnToControl: Button
+    private lateinit var btnToPairing: Button
+
     private val foundDevices = ArrayList<BluetoothDevice>()
     private lateinit var spinnerAdapter: ArrayAdapter<String>
 
@@ -110,6 +115,16 @@ class MainActivity : AppCompatActivity() {
         joystickViewRight = findViewById(R.id.joystickViewRight)
         scanProgressBar = findViewById(R.id.scanProgressBar)
 
+        pairingPanel = findViewById(R.id.pairingPanel)
+        controlPanel = findViewById(R.id.controlPanel)
+        btnToControl = findViewById(R.id.btnToControl)
+        btnToPairing = findViewById(R.id.btnToPairing)
+
+        // Принудительная инициализация для Samsung
+        pairingPanel.visibility = View.VISIBLE
+        controlPanel.visibility = View.GONE
+        pairingPanel.requestLayout()
+
         spinnerAdapter = ArrayAdapter(this, R.layout.custom_spinner_item, ArrayList<String>())
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         devicesSpinner.adapter = spinnerAdapter
@@ -123,72 +138,76 @@ class MainActivity : AppCompatActivity() {
 
         setupUIListeners()
         checkAndRequestPermissions()
+        
+        pairingPanel.visibility = View.VISIBLE
+        controlPanel.visibility = View.GONE
         setUiState(UiState.DISCONNECTED, statusText = "Press Scan to start")
     }
 
     private fun setUiState(state: UiState, deviceName: String? = null, statusText: String? = null) {
         currentState = state
-        when (state) {
-            UiState.DISCONNECTED -> {
-                this.statusTextView.text = statusText ?: "Status: Disconnected"
-                this.statusTextView.visibility = if (statusText != null) View.VISIBLE else View.INVISIBLE
-                devicesSpinner.visibility = if (spinnerAdapter.count > 0 && spinnerAdapter.getItem(0) != "No devices found") View.VISIBLE else View.GONE
-                devicesSpinner.isEnabled = spinnerAdapter.count > 0
-                scanProgressBar.visibility = View.GONE
-                scanButton.visibility = View.VISIBLE
-                scanButton.text = "Scan"
-                scanButton.isEnabled = true
-                joystickViewLeft.alpha = 0.3f
-                joystickViewRight.alpha = 0.3f
-                joystickViewLeft.isEnabled = false
-                joystickViewRight.isEnabled = false
-            }
-            UiState.SCANNING -> {
-                statusTextView.text = "Scanning for devices..."
-                statusTextView.visibility = View.VISIBLE
-                scanProgressBar.visibility = View.VISIBLE
-                scanButton.visibility = View.INVISIBLE
-                devicesSpinner.visibility = View.GONE
-                joystickViewLeft.alpha = 0.3f
-                joystickViewRight.alpha = 0.3f
-                joystickViewLeft.isEnabled = false
-                joystickViewRight.isEnabled = false
-            }
-            UiState.CONNECTING -> {
-                statusTextView.text = "Connecting to ${deviceName ?: "device"}..."
-                statusTextView.visibility = View.VISIBLE
-                scanProgressBar.visibility = View.VISIBLE
-                scanButton.visibility = View.INVISIBLE
-                devicesSpinner.visibility = View.VISIBLE
-                devicesSpinner.isEnabled = false
-            }
-            UiState.RECONNECTING -> {
-                statusTextView.text = "Reconnecting to ${deviceName ?: "device"}..."
-                statusTextView.visibility = View.VISIBLE
-                scanProgressBar.visibility = View.VISIBLE
-                scanButton.visibility = View.INVISIBLE
-                devicesSpinner.visibility = View.VISIBLE
-                devicesSpinner.isEnabled = false
-            }
-            UiState.CONNECTED -> {
-                statusTextView.text = "Connected to ${deviceName ?: "device"}"
-                statusTextView.visibility = View.VISIBLE
-                scanProgressBar.visibility = View.GONE
-                scanButton.visibility = View.VISIBLE
-                scanButton.text = "Disconnect"
-                scanButton.isEnabled = true
-                devicesSpinner.visibility = View.VISIBLE
-                devicesSpinner.isEnabled = false
-                joystickViewLeft.alpha = 1.0f
-                joystickViewRight.alpha = 1.0f
-                joystickViewLeft.isEnabled = true
-                joystickViewRight.isEnabled = true
+        runOnUiThread {
+            when (state) {
+                UiState.DISCONNECTED -> {
+                    statusTextView.text = statusText ?: "Status: Disconnected"
+                    statusTextView.visibility = View.VISIBLE
+                    devicesSpinner.visibility = View.VISIBLE
+                    devicesSpinner.isEnabled = true
+                    scanProgressBar.visibility = View.GONE
+                    scanButton.visibility = View.VISIBLE
+                    scanButton.text = "SCAN DEVICES"
+                    scanButton.isEnabled = true
+                    joystickViewLeft.alpha = 1.0f
+                    joystickViewRight.alpha = 1.0f
+                    joystickViewLeft.isEnabled = true
+                    joystickViewRight.isEnabled = true
+                }
+                UiState.SCANNING -> {
+                    statusTextView.text = "Scanning..."
+                    statusTextView.visibility = View.VISIBLE
+                    scanProgressBar.visibility = View.VISIBLE
+                    scanButton.visibility = View.INVISIBLE
+                    devicesSpinner.visibility = View.GONE
+                }
+                UiState.CONNECTING -> {
+                    statusTextView.text = "Connecting to ${deviceName ?: "device"}..."
+                    statusTextView.visibility = View.VISIBLE
+                    scanProgressBar.visibility = View.VISIBLE
+                    scanButton.visibility = View.INVISIBLE
+                }
+                UiState.RECONNECTING -> {
+                    statusTextView.text = "Reconnecting..."
+                    statusTextView.visibility = View.VISIBLE
+                    scanProgressBar.visibility = View.VISIBLE
+                }
+                UiState.CONNECTED -> {
+                    statusTextView.text = "Connected: ${deviceName ?: "device"}"
+                    statusTextView.visibility = View.VISIBLE
+                    scanProgressBar.visibility = View.GONE
+                    scanButton.visibility = View.VISIBLE
+                    scanButton.text = "DISCONNECT"
+                    scanButton.isEnabled = true
+                    joystickViewLeft.alpha = 1.0f
+                    joystickViewRight.alpha = 1.0f
+                    joystickViewLeft.isEnabled = true
+                    joystickViewRight.isEnabled = true
+                }
             }
         }
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun setupUIListeners() {
+        btnToControl.setOnClickListener {
+            pairingPanel.visibility = View.GONE
+            controlPanel.visibility = View.VISIBLE
+        }
+
+        btnToPairing.setOnClickListener {
+            controlPanel.visibility = View.GONE
+            pairingPanel.visibility = View.VISIBLE
+        }
+
         scanButton.setOnClickListener {
             if (currentState == UiState.CONNECTED) {
                 disconnect()
@@ -296,11 +315,18 @@ class MainActivity : AppCompatActivity() {
             bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
         }
 
-        if (!checkPermissions() || !isLocationServiceEnabled()) {
-            Toast.makeText(this, "Проверьте разрешения и включите геолокацию", Toast.LENGTH_LONG).show()
+        if (!checkPermissions()) {
+            Toast.makeText(this, "Необходимы разрешения для Bluetooth и локации", Toast.LENGTH_LONG).show()
             checkAndRequestPermissions()
-            if (!isLocationServiceEnabled()) {
+            return
+        }
+
+        if (!isLocationServiceEnabled()) {
+            Toast.makeText(this, "Включите геолокацию для поиска устройств", Toast.LENGTH_LONG).show()
+            try {
                 startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
+            } catch (e: Exception) {
+                Log.e(TAG, "Could not open location settings", e)
             }
             return
         }
@@ -428,11 +454,18 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkAndRequestPermissions() {
         val permissionsToRequest = ArrayList<String>()
+        var shouldShowSettings = false
+
         for (permission in neededPermissions) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
                 permissionsToRequest.add(permission)
+                // Если система говорит, что нужно показать пояснение, значит пользователь уже отказывал
+                if (!ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
+                    // Это может означать "Больше не спрашивать"
+                }
             }
         }
+
         if (permissionsToRequest.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 1)
         } else {
@@ -446,8 +479,20 @@ class MainActivity : AppCompatActivity() {
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 onPermissionsGranted()
             } else {
-                Toast.makeText(this, "Необходимы разрешения для работы с Bluetooth", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Без разрешений Bluetooth поиск невозможен. Открываю настройки...", Toast.LENGTH_LONG).show()
+                handler.postDelayed({ openAppSettings() }, 1500)
             }
+        }
+    }
+
+    private fun openAppSettings() {
+        try {
+            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+            val uri = android.net.Uri.fromParts("package", packageName, null)
+            intent.data = uri
+            startActivity(intent)
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not open settings", e)
         }
     }
 
