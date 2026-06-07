@@ -50,16 +50,17 @@
                 android:layout_marginTop="40dp">
 
                 <Button
-                    android:id="@+id/scanButton"
+                    android:id="@+id/btnDisconnect"
                     android:layout_width="150dp"
                     android:layout_height="wrap_content"
                     android:background="@drawable/button_rounded"
                     android:paddingTop="12dp"
                     android:paddingBottom="12dp"
-                    android:text="Scan"
+                    android:text="Disconnect"
                     android:textColor="@android:color/white"
                     android:textSize="16sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:visibility="gone" />
 
                 <ProgressBar
                     android:id="@+id/scanProgressBar"

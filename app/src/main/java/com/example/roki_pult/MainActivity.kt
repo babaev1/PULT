@@ -64,7 +64,7 @@ class MainActivity : AppCompatActivity() {
     private var lastConnectedDevice: BluetoothDevice? = null
 
     private lateinit var devicesSpinner: Spinner
-    private lateinit var scanButton: Button
+    private lateinit var btnDisconnect: Button
     private lateinit var statusTextView: TextView
     private lateinit var joystickViewLeft: JoystickView
     private lateinit var joystickViewRight: JoystickView
@@ -109,7 +109,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         devicesSpinner = findViewById(R.id.devicesSpinner)
-        scanButton = findViewById(R.id.scanButton)
+        btnDisconnect = findViewById(R.id.btnDisconnect)
         statusTextView = findViewById(R.id.statusTextView)
         joystickViewLeft = findViewById(R.id.joystickViewLeft)
         joystickViewRight = findViewById(R.id.joystickViewRight)
@@ -137,11 +137,11 @@ class MainActivity : AppCompatActivity() {
         bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
 
         setupUIListeners()
+        setUiState(UiState.DISCONNECTED, statusText = "Initializing...")
         checkAndRequestPermissions()
         
         pairingPanel.visibility = View.VISIBLE
         controlPanel.visibility = View.GONE
-        setUiState(UiState.DISCONNECTED, statusText = "Press Scan to start")
     }
 
     private fun setUiState(state: UiState, deviceName: String? = null, statusText: String? = null) {
@@ -154,9 +154,7 @@ class MainActivity : AppCompatActivity() {
                     devicesSpinner.visibility = View.VISIBLE
                     devicesSpinner.isEnabled = true
                     scanProgressBar.visibility = View.GONE
-                    scanButton.visibility = View.VISIBLE
-                    scanButton.text = "SCAN DEVICES"
-                    scanButton.isEnabled = true
+                    btnDisconnect.visibility = View.GONE
                     joystickViewLeft.alpha = 1.0f
                     joystickViewRight.alpha = 1.0f
                     joystickViewLeft.isEnabled = true
@@ -166,14 +164,15 @@ class MainActivity : AppCompatActivity() {
                     statusTextView.text = "Scanning..."
                     statusTextView.visibility = View.VISIBLE
                     scanProgressBar.visibility = View.VISIBLE
-                    scanButton.visibility = View.INVISIBLE
-                    devicesSpinner.visibility = View.GONE
+                    btnDisconnect.visibility = View.GONE
+                    devicesSpinner.visibility = View.VISIBLE
+                    devicesSpinner.isEnabled = true
                 }
                 UiState.CONNECTING -> {
                     statusTextView.text = "Connecting to ${deviceName ?: "device"}..."
                     statusTextView.visibility = View.VISIBLE
                     scanProgressBar.visibility = View.VISIBLE
-                    scanButton.visibility = View.INVISIBLE
+                    btnDisconnect.visibility = View.GONE
                 }
                 UiState.RECONNECTING -> {
                     statusTextView.text = "Reconnecting..."
@@ -184,9 +183,9 @@ class MainActivity : AppCompatActivity() {
                     statusTextView.text = "Connected: ${deviceName ?: "device"}"
                     statusTextView.visibility = View.VISIBLE
                     scanProgressBar.visibility = View.GONE
-                    scanButton.visibility = View.VISIBLE
-                    scanButton.text = "DISCONNECT"
-                    scanButton.isEnabled = true
+                    btnDisconnect.visibility = View.VISIBLE
+                    btnDisconnect.text = "DISCONNECT"
+                    btnDisconnect.isEnabled = true
                     joystickViewLeft.alpha = 1.0f
                     joystickViewRight.alpha = 1.0f
                     joystickViewLeft.isEnabled = true
@@ -201,19 +200,19 @@ class MainActivity : AppCompatActivity() {
         btnToControl.setOnClickListener {
             pairingPanel.visibility = View.GONE
             controlPanel.visibility = View.VISIBLE
+            stopScanning()
         }
 
         btnToPairing.setOnClickListener {
             controlPanel.visibility = View.GONE
             pairingPanel.visibility = View.VISIBLE
+            foundDevices.clear()
+            spinnerAdapter.clear()
+            scanLeDevice()
         }
 
-        scanButton.setOnClickListener {
-            if (currentState == UiState.CONNECTED) {
-                disconnect()
-            } else {
-                scanLeDevice()
-            }
+        btnDisconnect.setOnClickListener {
+            disconnect()
         }
 
         devicesSpinner.setOnTouchListener { _, event ->
@@ -315,48 +314,42 @@ class MainActivity : AppCompatActivity() {
             bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
         }
 
-        if (!checkPermissions()) {
-            Toast.makeText(this, "Необходимы разрешения для Bluetooth и локации", Toast.LENGTH_LONG).show()
-            checkAndRequestPermissions()
+        if (!checkPermissions() || !isLocationServiceEnabled()) {
             return
         }
 
-        if (!isLocationServiceEnabled()) {
-            Toast.makeText(this, "Включите геолокацию для поиска устройств", Toast.LENGTH_LONG).show()
+        if (isScanning || currentState == UiState.CONNECTED || currentState == UiState.CONNECTING) return
+
+        setUiState(UiState.SCANNING)
+        isScanning = true
+        // Не очищаем найденные устройства, чтобы список не моргал, 
+        // но можно очистить при первом входе на панель
+        
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
+            bluetoothLeScanner?.startScan(leScanCallback)
+        }
+
+        handler.postDelayed({
+            if (isScanning) {
+                stopScanning()
+                // Если мы все еще на панели сопряжения и не подключены - перезапускаем поиск
+                if (pairingPanel.visibility == View.VISIBLE && currentState != UiState.CONNECTED && currentState != UiState.CONNECTING) {
+                    scanLeDevice()
+                }
+            }
+        }, SCAN_PERIOD)
+    }
+
+    private fun stopScanning() {
+        isScanning = false
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
             try {
-                startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS))
-            } catch (e: Exception) {
-                Log.e(TAG, "Could not open location settings", e)
-            }
-            return
-        }
-
-        if (!isScanning) {
-            setUiState(UiState.SCANNING)
-            handler.postDelayed({
-                isScanning = false
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
-                    bluetoothLeScanner?.stopScan(leScanCallback)
-                }
-                if (foundDevices.isEmpty()) {
-                    spinnerAdapter.clear()
-                    setUiState(UiState.DISCONNECTED, statusText = "No devices found")
-                } else {
-                    setUiState(UiState.DISCONNECTED, statusText = "Scan finished. Select a device.")
-                }
-            }, SCAN_PERIOD)
-
-            isScanning = true
-            foundDevices.clear()
-            spinnerAdapter.clear()
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
-                bluetoothLeScanner?.startScan(leScanCallback)
-            }
-        } else {
-            isScanning = false
-            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
                 bluetoothLeScanner?.stopScan(leScanCallback)
+            } catch (e: Exception) {
+                Log.e(TAG, "Error stopping scan", e)
             }
+        }
+        if (currentState == UiState.SCANNING) {
             setUiState(UiState.DISCONNECTED)
         }
     }
@@ -392,13 +385,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun connectToDevice(device: BluetoothDevice) {
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return
+        stopScanning()
         setUiState(UiState.CONNECTING, device.name)
         Thread {
-            if (isScanning) {
-                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
-                    bluetoothLeScanner?.stopScan(leScanCallback)
-                }
-            }
             try {
                 bluetoothSocket?.close()
                 bluetoothSocket = device.createRfcommSocketToServiceRecord(SPP_UUID)
@@ -418,6 +407,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun disconnect(statusOverride: String? = null) {
         stopDataSendTimer()
+        stopScanning()
         try {
             outputStream?.close()
             bluetoothSocket?.close()
@@ -430,6 +420,9 @@ class MainActivity : AppCompatActivity() {
         runOnUiThread {
             setUiState(UiState.DISCONNECTED, statusText = statusOverride ?: "Disconnected.")
             spinnerAdapter.clear()
+            if (pairingPanel.visibility == View.VISIBLE) {
+                scanLeDevice()
+            }
         }
     }
 
@@ -449,6 +442,10 @@ class MainActivity : AppCompatActivity() {
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             requestBluetooth.launch(enableBtIntent)
+        } else {
+            if (pairingPanel.visibility == View.VISIBLE) {
+                scanLeDevice()
+            }
         }
     }
 
@@ -501,7 +498,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private val requestBluetooth = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode != RESULT_OK) {
+        if (result.resultCode == RESULT_OK) {
+            if (pairingPanel.visibility == View.VISIBLE) {
+                scanLeDevice()
+            }
+        } else {
             Toast.makeText(this, "Для работы приложения требуется включенный Bluetooth", Toast.LENGTH_LONG).show()
         }
     }
