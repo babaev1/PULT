@@ -5,7 +5,7 @@
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/gradient_background"
+    android:background="@android:color/black"
     tools:context=".MainActivity">
 
     <!-- Panel 1: Pairing Screen -->
@@ -13,31 +13,37 @@
         android:id="@+id/pairingPanel"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/panel_outline"
+        android:background="@android:color/black"
         android:visibility="visible">
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnToControl"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="0dp"
             android:background="@drawable/button_rounded"
             android:text="←CONNECT"
             android:textColor="@android:color/white"
+            app:layout_constraintHeight_percent="0.16"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.25" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnDisconnect"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginEnd="16dp"
             android:background="@drawable/button_rounded"
             android:text="DISCONNECT"
             android:textColor="@android:color/white"
             android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintHeight_percent="0.16"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.25" />
 
         <!-- Окно BLE устройств (80% высоты, 45% ширины) -->
         <androidx.recyclerview.widget.RecyclerView
@@ -51,7 +57,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintWidth_percent="0.45" />
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnPairForget"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
@@ -93,20 +99,23 @@
         android:id="@+id/controlPanel"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@drawable/panel_outline"
+        android:background="@android:color/black"
         android:visibility="gone"
         tools:visibility="gone">
 
-        <Button
+        <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnToPairing"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="0dp"
+            android:layout_marginEnd="16dp"
             android:background="@drawable/button_rounded"
             android:text="PAIRING→"
             android:textColor="@android:color/white"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintHeight_percent="0.16"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintWidth_percent="0.25" />
 
         <!-- Левый джойстик -->
         <com.example.roki_pult.JoystickView

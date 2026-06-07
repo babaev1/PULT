@@ -25,10 +25,14 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import android.view.LayoutInflater
+import android.media.AudioManager
+import android.view.SoundEffectConstants
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowInsetsController
 import android.view.WindowManager
 import android.widget.Button
+import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
@@ -36,6 +40,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import java.io.IOException
@@ -57,6 +64,11 @@ class MainActivity : AppCompatActivity() {
     private val DEVICE_TIMEOUT: Long = 12000
     private val JOYSTICK_SEND_INTERVAL: Long = 20
     private val RECONNECT_DELAY: Long = 2000
+
+    private val COLOR_RED = Color.parseColor("#F44336")
+    private val COLOR_GREEN = Color.parseColor("#4CAF50")
+    private val COLOR_BLUE = Color.parseColor("#2196F3")
+    private val COLOR_GRAY = Color.parseColor("#9E9E9E")
 
     private enum class UiState {
         DISCONNECTED,
@@ -181,7 +193,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        // Принудительное включение звука клавиш для приложения
+        volumeControlStream = AudioManager.STREAM_MUSIC
+
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        hideSystemUI()
 
         devicesRecyclerView = findViewById(R.id.devicesRecyclerView)
         btnDisconnect = findViewById(R.id.btnDisconnect)
@@ -226,6 +242,10 @@ class MainActivity : AppCompatActivity() {
         setUiState(UiState.DISCONNECTED, statusText = "Initializing...")
         checkAndRequestPermissions()
         
+        // Установка начальных цветов для кнопок переключения панелей
+        setButtonFillColor(btnToControl, COLOR_GREEN)
+        setButtonFillColor(btnToPairing, COLOR_BLUE)
+
         val filter = IntentFilter().apply {
             addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
             addAction(BluetoothDevice.ACTION_PAIRING_REQUEST)
@@ -239,6 +259,21 @@ class MainActivity : AppCompatActivity() {
         
         updatePairForgetButton()
         updateDisconnectButton()
+    }
+
+    private fun hideSystemUI() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        WindowInsetsControllerCompat(window, window.decorView).let { controller ->
+            controller.hide(WindowInsetsCompat.Type.systemBars())
+            controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
+    }
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        if (hasFocus) {
+            hideSystemUI()
+        }
     }
 
     private fun setUiState(state: UiState, deviceName: String? = null, statusText: String? = null) {
@@ -275,10 +310,10 @@ class MainActivity : AppCompatActivity() {
         val layerDrawable = btnDisconnect.background as? LayerDrawable
         val fillDrawable = layerDrawable?.findDrawableByLayerId(R.id.button_fill) as? GradientDrawable
         if (currentState == UiState.CONNECTED) {
-            fillDrawable?.setColor(Color.RED)
+            fillDrawable?.setColor(COLOR_RED)
             btnDisconnect.isEnabled = true
         } else {
-            fillDrawable?.setColor(Color.GRAY)
+            fillDrawable?.setColor(COLOR_GRAY)
             btnDisconnect.isEnabled = false
         }
     }
@@ -289,19 +324,25 @@ class MainActivity : AppCompatActivity() {
         
         if (selectedPosition == -1 || selectedPosition >= foundDevices.size) {
             btnPairForget.text = "PAIR"
-            fillDrawable?.setColor(Color.GRAY)
+            fillDrawable?.setColor(COLOR_GRAY)
         } else {
             val device = foundDevices[selectedPosition]
             if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
                 if (device.bondState == BluetoothDevice.BOND_BONDED) {
                     btnPairForget.text = "FORGET"
-                    fillDrawable?.setColor(Color.RED)
+                    fillDrawable?.setColor(COLOR_RED)
                 } else {
                     btnPairForget.text = "PAIR"
-                    fillDrawable?.setColor(Color.GREEN)
+                    fillDrawable?.setColor(COLOR_GREEN)
                 }
             }
         }
+    }
+
+    private fun setButtonFillColor(button: Button, color: Int) {
+        val layerDrawable = button.background as? LayerDrawable
+        val fillDrawable = layerDrawable?.findDrawableByLayerId(R.id.button_fill) as? GradientDrawable
+        fillDrawable?.setColor(color)
     }
 
     private fun onDeviceSelected(position: Int) {
@@ -327,12 +368,16 @@ class MainActivity : AppCompatActivity() {
     @SuppressLint("ClickableViewAccessibility")
     private fun setupUIListeners() {
         btnToControl.setOnClickListener {
+            it.isSoundEffectsEnabled = true
+            it.playSoundEffect(SoundEffectConstants.CLICK)
             pairingPanel.visibility = View.GONE
             controlPanel.visibility = View.VISIBLE
             stopScanning()
         }
 
         btnToPairing.setOnClickListener {
+            it.isSoundEffectsEnabled = true
+            it.playSoundEffect(SoundEffectConstants.CLICK)
             controlPanel.visibility = View.GONE
             pairingPanel.visibility = View.VISIBLE
             deviceAdapter.notifyDataSetChanged()
@@ -342,10 +387,14 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnDisconnect.setOnClickListener {
+            it.isSoundEffectsEnabled = true
+            it.playSoundEffect(SoundEffectConstants.CLICK)
             disconnect()
         }
 
         btnPairForget.setOnClickListener {
+            it.isSoundEffectsEnabled = true
+            it.playSoundEffect(SoundEffectConstants.CLICK)
             if (selectedPosition != -1 && selectedPosition < foundDevices.size) {
                 val device = foundDevices[selectedPosition]
                 if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
@@ -532,7 +581,10 @@ class MainActivity : AppCompatActivity() {
         }
         outputStream = null
         bluetoothSocket = null
-        lastConnectedDevice = null
+        // Мы НЕ обнуляем lastConnectedDevice здесь, чтобы в списке (onBindViewHolder)
+        // значок оставался зеленым сразу после нажатия Disconnect.
+        // Он обнулится только при подключении к ДРУГОМУ устройству.
+
         runOnUiThread {
             setUiState(UiState.DISCONNECTED, statusText = statusOverride ?: "Disconnected")
             if (pairingPanel.visibility == View.VISIBLE) {
@@ -616,10 +668,13 @@ class MainActivity : AppCompatActivity() {
     ) : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
 
         inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val wifiIcon: ImageView = view.findViewById(R.id.wifiIcon)
             val indicator: View = view.findViewById(R.id.statusIndicator)
             val name: TextView = view.findViewById(R.id.deviceName)
             init {
                 view.setOnClickListener { 
+                    it.isSoundEffectsEnabled = true
+                    it.playSoundEffect(SoundEffectConstants.CLICK)
                     val pos = bindingAdapterPosition
                     if (pos != RecyclerView.NO_POSITION) onClick(pos) 
                 }
@@ -644,12 +699,25 @@ class MainActivity : AppCompatActivity() {
             if (ActivityCompat.checkSelfPermission(holder.itemView.context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
                 holder.name.text = device.name ?: "Unknown"
                 
+                // Обновление значка WiFi в зависимости от того, видно ли устройство в эфире
+                val lastSeen = lastSeenMap[device.address] ?: 0L
+                // Устройство считается видимым, если оно было в эфире недавно ИЛИ если оно было последним подключенным
+                // Мы НЕ сбрасываем lastConnectedDevice сразу при дисконнекте для этого условия
+                val isVisible = (System.currentTimeMillis() - lastSeen) < DEVICE_TIMEOUT || 
+                                (lastConnectedDevice?.address == device.address)
+
+                if (isVisible) {
+                    holder.wifiIcon.setImageResource(R.drawable.android_wifi_3_bar_24)
+                } else {
+                    holder.wifiIcon.setImageResource(R.drawable.android_wifi_3_bar_off_24)
+                }
+                
                 val indicatorDrawable = holder.indicator.background as? GradientDrawable
                 if (device.bondState == BluetoothDevice.BOND_BONDED) {
                     if (currentState == UiState.CONNECTED && lastConnectedDevice?.address == device.address) {
-                        indicatorDrawable?.setColor(Color.GREEN)
+                        indicatorDrawable?.setColor(COLOR_GREEN)
                     } else {
-                        indicatorDrawable?.setColor(Color.RED)
+                        indicatorDrawable?.setColor(COLOR_RED)
                     }
                 } else {
                     indicatorDrawable?.setColor(Color.TRANSPARENT)

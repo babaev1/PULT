@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="60dp"
     android:gravity="center_vertical"
@@ -7,10 +8,19 @@
     android:padding="8dp"
     android:layout_marginBottom="2dp">
 
+    <ImageView
+        android:id="@+id/wifiIcon"
+        android:layout_width="wrap_content"
+        android:layout_height="18sp"
+        android:layout_marginEnd="8dp"
+        android:adjustViewBounds="true"
+        android:contentDescription="WiFi Status"
+        android:src="@drawable/android_wifi_3_bar_off_24" />
+
     <View
         android:id="@+id/statusIndicator"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="16dp"
+        android:layout_height="16dp"
         android:layout_marginEnd="12dp"
         android:background="@drawable/circle_white_outline" />
 
@@ -19,6 +29,6 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textColor="@android:color/white"
-        android:textSize="16sp" />
+        android:textSize="18sp" />
 
 </LinearLayout>

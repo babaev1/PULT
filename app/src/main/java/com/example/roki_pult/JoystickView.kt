@@ -156,6 +156,10 @@ class JoystickView @JvmOverloads constructor(
         val distance = sqrt(displacementX.pow(2) + displacementY.pow(2))
 
         when (event.action) {
+            MotionEvent.ACTION_DOWN -> {
+                isSoundEffectsEnabled = true
+                playSoundEffect(android.view.SoundEffectConstants.CLICK)
+            }
             MotionEvent.ACTION_MOVE -> {
                 if (distance < trenchRadius) {
                     touchX = event.x

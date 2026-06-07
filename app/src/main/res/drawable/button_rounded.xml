@@ -3,15 +3,15 @@
     <!-- Слой заливки -->
     <item android:id="@+id/button_fill">
         <shape android:shape="rectangle">
-            <solid android:color="#FF8A65" />
+            <solid android:color="#9E9E9E" />
             <corners android:radius="12dp" />
         </shape>
     </item>
     <!-- Слой контура (поверх заливки) -->
-    <item android:id="@+id/button_stroke">
+    <item>
         <shape android:shape="rectangle">
             <stroke
-                android:width="3dp"
+                android:width="2dp"
                 android:color="#FFFFFF" />
             <solid android:color="@android:color/transparent" />
             <corners android:radius="12dp" />
