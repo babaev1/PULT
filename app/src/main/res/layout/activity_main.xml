@@ -6,7 +6,6 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/gradient_background"
-    android:clipChildren="false"
     tools:context=".MainActivity">
 
     <!-- Panel 1: Pairing Screen -->
@@ -14,6 +13,7 @@
         android:id="@+id/pairingPanel"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@drawable/panel_outline"
         android:visibility="visible">
 
         <Button
@@ -27,61 +27,65 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <LinearLayout
-            android:id="@+id/bluetoothControls"
-            android:layout_width="0dp"
+        <Button
+            android:id="@+id/btnDisconnect"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="vertical"
-            app:layout_constraintBottom_toBottomOf="parent"
+            android:layout_margin="16dp"
+            android:background="@drawable/button_rounded"
+            android:text="DISCONNECT"
+            android:textColor="@android:color/white"
+            android:textStyle="bold"
             app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <!-- Окно BLE устройств (80% высоты, 45% ширины) -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/devicesRecyclerView"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:scrollbars="vertical"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHeight_percent="0.8"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintWidth_percent="0.5">
+            app:layout_constraintWidth_percent="0.45" />
 
-            <Spinner
-                android:id="@+id/devicesSpinner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+        <Button
+            android:id="@+id/btnPairForget"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:background="@drawable/button_rounded"
+            android:text="PAIR"
+            android:textColor="@android:color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="@id/devicesRecyclerView"
+            app:layout_constraintStart_toStartOf="@id/devicesRecyclerView" />
 
-            <FrameLayout
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="40dp">
+        <ProgressBar
+            android:id="@+id/scanProgressBar"
+            style="?android:attr/progressBarStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:visibility="gone"
+            app:layout_constraintBottom_toTopOf="@id/btnPairForget"
+            app:layout_constraintEnd_toEndOf="@id/devicesRecyclerView"
+            app:layout_constraintStart_toStartOf="@id/devicesRecyclerView"
+            tools:visibility="visible" />
 
-                <Button
-                    android:id="@+id/btnDisconnect"
-                    android:layout_width="150dp"
-                    android:layout_height="wrap_content"
-                    android:background="@drawable/button_rounded"
-                    android:paddingTop="12dp"
-                    android:paddingBottom="12dp"
-                    android:text="Disconnect"
-                    android:textColor="@android:color/white"
-                    android:textSize="16sp"
-                    android:textStyle="bold"
-                    android:visibility="gone" />
+        <TextView
+            android:id="@+id/statusTextView"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:text="Status: Disconnected"
+            android:textColor="@android:color/white"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent" />
 
-                <ProgressBar
-                    android:id="@+id/scanProgressBar"
-                    style="?android:attr/progressBarStyle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center"
-                    android:visibility="gone"
-                    tools:visibility="visible" />
-
-            </FrameLayout>
-
-            <TextView
-                android:id="@+id/statusTextView"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:text="Status: Disconnected"
-                android:textColor="@android:color/white" />
-
-        </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
     <!-- Panel 2: Control Screen -->
@@ -89,8 +93,9 @@
         android:id="@+id/controlPanel"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:background="@drawable/panel_outline"
         android:visibility="gone"
-        tools:visibility="visible">
+        tools:visibility="gone">
 
         <Button
             android:id="@+id/btnToPairing"
@@ -111,8 +116,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintDimensionRatio="1:1"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintWidth_percent="0.35" />
+            app:layout_constraintWidth_percent="0.2" />
 
         <!-- Правый джойстик -->
         <com.example.roki_pult.JoystickView
@@ -122,8 +126,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintDimensionRatio="1:1"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintWidth_percent="0.35" />
+            app:layout_constraintWidth_percent="0.2" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

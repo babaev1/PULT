@@ -1,11 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<shape xmlns:android="http://schemas.android.com/apk/res/android"
-    android:shape="rectangle">
-
-    <!-- Цвет фона кнопки -->
-    <solid android:color="#FF8A65" />
-
-    <!-- Закругление углов -->
-    <corners android:radius="12dp" />
-
-</shape>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Слой заливки -->
+    <item android:id="@+id/button_fill">
+        <shape android:shape="rectangle">
+            <solid android:color="#FF8A65" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+    <!-- Слой контура (поверх заливки) -->
+    <item android:id="@+id/button_stroke">
+        <shape android:shape="rectangle">
+            <stroke
+                android:width="3dp"
+                android:color="#FFFFFF" />
+            <solid android:color="@android:color/transparent" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+</layer-list>

@@ -10,33 +10,41 @@ import android.bluetooth.BluetoothSocket
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.BluetoothLeScanner
+import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.LayerDrawable
 import android.location.LocationManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
-import android.view.MotionEvent
+import android.view.LayoutInflater
 import android.view.View
-import android.widget.AdapterView
-import android.widget.ArrayAdapter
+import android.view.ViewGroup
+import android.view.WindowManager
 import android.widget.Button
 import android.widget.ProgressBar
-import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import java.io.IOException
 import java.io.OutputStream
+import java.lang.reflect.Method
 import java.util.Timer
 import java.util.TimerTask
 import java.util.UUID
+import java.util.concurrent.ConcurrentHashMap
 
 @SuppressLint("ClickableViewAccessibility")
 class MainActivity : AppCompatActivity() {
@@ -45,6 +53,8 @@ class MainActivity : AppCompatActivity() {
     private val ROKI_TAG = "ROKI"
     private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
     private val SCAN_PERIOD: Long = 10000
+    private val PRUNE_INTERVAL: Long = 2000
+    private val DEVICE_TIMEOUT: Long = 12000
     private val JOYSTICK_SEND_INTERVAL: Long = 20
     private val RECONNECT_DELAY: Long = 2000
 
@@ -63,8 +73,9 @@ class MainActivity : AppCompatActivity() {
     private var outputStream: OutputStream? = null
     private var lastConnectedDevice: BluetoothDevice? = null
 
-    private lateinit var devicesSpinner: Spinner
+    private lateinit var devicesRecyclerView: RecyclerView
     private lateinit var btnDisconnect: Button
+    private lateinit var btnPairForget: Button
     private lateinit var statusTextView: TextView
     private lateinit var joystickViewLeft: JoystickView
     private lateinit var joystickViewRight: JoystickView
@@ -76,7 +87,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnToPairing: Button
 
     private val foundDevices = ArrayList<BluetoothDevice>()
-    private lateinit var spinnerAdapter: ArrayAdapter<String>
+    private val lastSeenMap = ConcurrentHashMap<String, Long>()
+    private lateinit var deviceAdapter: DeviceAdapter
+    private var selectedPosition: Int = -1
 
     private var isScanning = false
     private val handler = Handler(Looper.getMainLooper())
@@ -88,7 +101,6 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var axisRightY: Byte = 0
 
     private val messageOut = CsMessageOut()
-    private var isUserSpinnerInteraction = false
 
     private val neededPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         arrayOf(
@@ -104,12 +116,76 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    private val bluetoothReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val device = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent?.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE, BluetoothDevice::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent?.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE)
+            }
+
+            when (intent?.action) {
+                BluetoothDevice.ACTION_BOND_STATE_CHANGED -> {
+                    val bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, BluetoothDevice.ERROR)
+                    if (ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        Log.d(TAG, "Bond state changed for ${device?.name}: $bondState")
+                    }
+                    deviceAdapter.notifyDataSetChanged()
+                    updatePairForgetButton()
+                }
+                BluetoothDevice.ACTION_PAIRING_REQUEST -> {
+                    if (ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        try {
+                            val pin = "1234".toByteArray()
+                            device?.setPin(pin)
+                            // Прерываем дальнейшее распространение события, чтобы скрыть системное окно
+                            abortBroadcast()
+                            Log.d(TAG, "Auto-setting PIN 1234 and aborting broadcast for ${device?.name}")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Error setting PIN", e)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private val pruneRunnable = object : Runnable {
+        override fun run() {
+            if (isScanning) {
+                val now = System.currentTimeMillis()
+                var changed = false
+                val iterator = foundDevices.iterator()
+                while (iterator.hasNext()) {
+                    val device = iterator.next()
+                    if (ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                        if (device.bondState != BluetoothDevice.BOND_BONDED) {
+                            val lastSeen = lastSeenMap[device.address] ?: 0L
+                            if (now - lastSeen > DEVICE_TIMEOUT) {
+                                iterator.remove()
+                                changed = true
+                            }
+                        }
+                    }
+                }
+                if (changed) {
+                    runOnUiThread { deviceAdapter.notifyDataSetChanged() }
+                }
+            }
+            handler.postDelayed(this, PRUNE_INTERVAL)
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        devicesSpinner = findViewById(R.id.devicesSpinner)
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+        devicesRecyclerView = findViewById(R.id.devicesRecyclerView)
         btnDisconnect = findViewById(R.id.btnDisconnect)
+        btnPairForget = findViewById(R.id.btnPairForget)
         statusTextView = findViewById(R.id.statusTextView)
         joystickViewLeft = findViewById(R.id.joystickViewLeft)
         joystickViewRight = findViewById(R.id.joystickViewRight)
@@ -120,19 +196,29 @@ class MainActivity : AppCompatActivity() {
         btnToControl = findViewById(R.id.btnToControl)
         btnToPairing = findViewById(R.id.btnToPairing)
 
-        // Принудительная инициализация для Samsung
-        pairingPanel.visibility = View.VISIBLE
-        controlPanel.visibility = View.GONE
-        pairingPanel.requestLayout()
-
-        spinnerAdapter = ArrayAdapter(this, R.layout.custom_spinner_item, ArrayList<String>())
-        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-        devicesSpinner.adapter = spinnerAdapter
+        deviceAdapter = DeviceAdapter(foundDevices) { position ->
+            onDeviceSelected(position)
+        }
+        devicesRecyclerView.layoutManager = LinearLayoutManager(this)
+        devicesRecyclerView.adapter = deviceAdapter
 
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothAdapter = bluetoothManager.adapter
         if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth is not available on this device", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Bluetooth is not available", Toast.LENGTH_LONG).show()
+        } else {
+            // Добавляем уже сопряженные устройства в список при запуске
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                val pairedDevices = bluetoothAdapter?.bondedDevices
+                pairedDevices?.forEach { device ->
+                    if (device.name != null && device.name.contains(ROKI_TAG)) {
+                        if (!foundDevices.any { it.address == device.address }) {
+                            foundDevices.add(device)
+                        }
+                    }
+                }
+                deviceAdapter.notifyDataSetChanged()
+            }
         }
         bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
 
@@ -140,56 +226,99 @@ class MainActivity : AppCompatActivity() {
         setUiState(UiState.DISCONNECTED, statusText = "Initializing...")
         checkAndRequestPermissions()
         
+        val filter = IntentFilter().apply {
+            addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
+            addAction(BluetoothDevice.ACTION_PAIRING_REQUEST)
+            priority = IntentFilter.SYSTEM_HIGH_PRIORITY
+        }
+        registerReceiver(bluetoothReceiver, filter)
+        handler.post(pruneRunnable)
+
         pairingPanel.visibility = View.VISIBLE
         controlPanel.visibility = View.GONE
+        
+        updatePairForgetButton()
+        updateDisconnectButton()
     }
 
     private fun setUiState(state: UiState, deviceName: String? = null, statusText: String? = null) {
         currentState = state
         runOnUiThread {
+            updateDisconnectButton()
+            deviceAdapter.notifyDataSetChanged()
             when (state) {
                 UiState.DISCONNECTED -> {
                     statusTextView.text = statusText ?: "Status: Disconnected"
-                    statusTextView.visibility = View.VISIBLE
-                    devicesSpinner.visibility = View.VISIBLE
-                    devicesSpinner.isEnabled = true
                     scanProgressBar.visibility = View.GONE
-                    btnDisconnect.visibility = View.GONE
-                    joystickViewLeft.alpha = 1.0f
-                    joystickViewRight.alpha = 1.0f
-                    joystickViewLeft.isEnabled = true
-                    joystickViewRight.isEnabled = true
                 }
                 UiState.SCANNING -> {
                     statusTextView.text = "Scanning..."
-                    statusTextView.visibility = View.VISIBLE
                     scanProgressBar.visibility = View.VISIBLE
-                    btnDisconnect.visibility = View.GONE
-                    devicesSpinner.visibility = View.VISIBLE
-                    devicesSpinner.isEnabled = true
                 }
                 UiState.CONNECTING -> {
                     statusTextView.text = "Connecting to ${deviceName ?: "device"}..."
-                    statusTextView.visibility = View.VISIBLE
                     scanProgressBar.visibility = View.VISIBLE
-                    btnDisconnect.visibility = View.GONE
                 }
                 UiState.RECONNECTING -> {
                     statusTextView.text = "Reconnecting..."
-                    statusTextView.visibility = View.VISIBLE
                     scanProgressBar.visibility = View.VISIBLE
                 }
                 UiState.CONNECTED -> {
                     statusTextView.text = "Connected: ${deviceName ?: "device"}"
-                    statusTextView.visibility = View.VISIBLE
                     scanProgressBar.visibility = View.GONE
-                    btnDisconnect.visibility = View.VISIBLE
-                    btnDisconnect.text = "DISCONNECT"
-                    btnDisconnect.isEnabled = true
-                    joystickViewLeft.alpha = 1.0f
-                    joystickViewRight.alpha = 1.0f
-                    joystickViewLeft.isEnabled = true
-                    joystickViewRight.isEnabled = true
+                }
+            }
+        }
+    }
+
+    private fun updateDisconnectButton() {
+        val layerDrawable = btnDisconnect.background as? LayerDrawable
+        val fillDrawable = layerDrawable?.findDrawableByLayerId(R.id.button_fill) as? GradientDrawable
+        if (currentState == UiState.CONNECTED) {
+            fillDrawable?.setColor(Color.RED)
+            btnDisconnect.isEnabled = true
+        } else {
+            fillDrawable?.setColor(Color.GRAY)
+            btnDisconnect.isEnabled = false
+        }
+    }
+
+    private fun updatePairForgetButton() {
+        val layerDrawable = btnPairForget.background as? LayerDrawable
+        val fillDrawable = layerDrawable?.findDrawableByLayerId(R.id.button_fill) as? GradientDrawable
+        
+        if (selectedPosition == -1 || selectedPosition >= foundDevices.size) {
+            btnPairForget.text = "PAIR"
+            fillDrawable?.setColor(Color.GRAY)
+        } else {
+            val device = foundDevices[selectedPosition]
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                if (device.bondState == BluetoothDevice.BOND_BONDED) {
+                    btnPairForget.text = "FORGET"
+                    fillDrawable?.setColor(Color.RED)
+                } else {
+                    btnPairForget.text = "PAIR"
+                    fillDrawable?.setColor(Color.GREEN)
+                }
+            }
+        }
+    }
+
+    private fun onDeviceSelected(position: Int) {
+        selectedPosition = position
+        deviceAdapter.notifyDataSetChanged()
+        updatePairForgetButton()
+
+        if (position >= 0 && position < foundDevices.size) {
+            val device = foundDevices[position]
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                if (device.bondState == BluetoothDevice.BOND_BONDED) {
+                    if (currentState == UiState.CONNECTED && lastConnectedDevice?.address != device.address) {
+                        disconnect()
+                    }
+                    if (currentState != UiState.CONNECTED && currentState != UiState.CONNECTING) {
+                        connectToDevice(device)
+                    }
                 }
             }
         }
@@ -206,31 +335,26 @@ class MainActivity : AppCompatActivity() {
         btnToPairing.setOnClickListener {
             controlPanel.visibility = View.GONE
             pairingPanel.visibility = View.VISIBLE
-            foundDevices.clear()
-            spinnerAdapter.clear()
-            scanLeDevice()
+            deviceAdapter.notifyDataSetChanged()
+            if (foundDevices.isEmpty()) {
+                scanLeDevice()
+            }
         }
 
         btnDisconnect.setOnClickListener {
             disconnect()
         }
 
-        devicesSpinner.setOnTouchListener { _, event ->
-            if (event.action == MotionEvent.ACTION_UP) {
-                isUserSpinnerInteraction = true
-            }
-            false
-        }
-        devicesSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
-            override fun onItemSelected(parent: AdapterView<*>, view: View?, position: Int, id: Long) {
-                if (!isUserSpinnerInteraction) return
-                if (foundDevices.isNotEmpty() && position > 0 && position <= foundDevices.size) {
-                    connectToDevice(foundDevices[position - 1])
+        btnPairForget.setOnClickListener {
+            if (selectedPosition != -1 && selectedPosition < foundDevices.size) {
+                val device = foundDevices[selectedPosition]
+                if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                    if (device.bondState == BluetoothDevice.BOND_BONDED) {
+                        unpairDevice(device)
+                    } else {
+                        device.createBond()
+                    }
                 }
-                isUserSpinnerInteraction = false
-            }
-            override fun onNothingSelected(parent: AdapterView<*>) {
-                isUserSpinnerInteraction = false
             }
         }
 
@@ -247,6 +371,15 @@ class MainActivity : AppCompatActivity() {
                 axisRightY = y.toByte()
             }
         })
+    }
+
+    private fun unpairDevice(device: BluetoothDevice) {
+        try {
+            val method: Method = device.javaClass.getMethod("removeBond")
+            method.invoke(device)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error unpairing device", e)
+        }
     }
 
     private fun startDataSendTimer() {
@@ -278,7 +411,7 @@ class MainActivity : AppCompatActivity() {
                 val size = messageOut.getPayloadSize()
                 outputStream?.write(buffer, 0, size)
             } catch (e: IOException) {
-                Log.e(TAG, "Ошибка отправки данных: соединение потеряно", e)
+                Log.e(TAG, "Data send error", e)
                 attemptReconnect()
             }
         }
@@ -305,25 +438,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun scanLeDevice() {
-        if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Bluetooth not supported on this device", Toast.LENGTH_SHORT).show()
-            return
-        }
-
+        if (bluetoothAdapter == null) return
         if (bluetoothLeScanner == null) {
             bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
         }
-
-        if (!checkPermissions() || !isLocationServiceEnabled()) {
-            return
-        }
-
+        if (!checkPermissions() || !isLocationServiceEnabled()) return
         if (isScanning || currentState == UiState.CONNECTED || currentState == UiState.CONNECTING) return
 
         setUiState(UiState.SCANNING)
         isScanning = true
-        // Не очищаем найденные устройства, чтобы список не моргал, 
-        // но можно очистить при первом входе на панель
         
         if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
             bluetoothLeScanner?.startScan(leScanCallback)
@@ -332,7 +455,6 @@ class MainActivity : AppCompatActivity() {
         handler.postDelayed({
             if (isScanning) {
                 stopScanning()
-                // Если мы все еще на панели сопряжения и не подключены - перезапускаем поиск
                 if (pairingPanel.visibility == View.VISIBLE && currentState != UiState.CONNECTED && currentState != UiState.CONNECTING) {
                     scanLeDevice()
                 }
@@ -361,16 +483,11 @@ class MainActivity : AppCompatActivity() {
                 if (ActivityCompat.checkSelfPermission(this@MainActivity, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) return
                 val deviceName = device.name
                 if (deviceName != null && deviceName.contains(ROKI_TAG)) {
-                    Log.d(TAG, "Found ROKI device: $deviceName, address: ${device.address}")
-                    if (!foundDevices.contains(device)) {
-                        if (foundDevices.isEmpty()) {
-                            spinnerAdapter.clear()
-                            spinnerAdapter.add("Select device...")
-                        }
+                    lastSeenMap[device.address] = System.currentTimeMillis()
+                    if (!foundDevices.any { it.address == device.address }) {
                         foundDevices.add(device)
                         runOnUiThread {
-                            spinnerAdapter.add("$deviceName - ${device.address}")
-                            spinnerAdapter.notifyDataSetChanged()
+                            deviceAdapter.notifyDataSetChanged()
                         }
                     }
                 }
@@ -378,8 +495,7 @@ class MainActivity : AppCompatActivity() {
         }
         override fun onScanFailed(errorCode: Int) {
             super.onScanFailed(errorCode)
-            Log.e(TAG, "Ошибка сканирования Bluetooth LE. Код ошибки: $errorCode")
-            setUiState(UiState.DISCONNECTED, statusText = "Scan failed (Code: $errorCode)")
+            setUiState(UiState.DISCONNECTED, statusText = "Scan failed ($errorCode)")
         }
     }
 
@@ -399,8 +515,8 @@ class MainActivity : AppCompatActivity() {
                     startDataSendTimer()
                 }
             } catch (e: IOException) {
-                Log.e(TAG, "Не удалось подключиться к устройству", e)
-                disconnect(statusOverride = "Connection to ${device.name} failed.")
+                Log.e(TAG, "Connection failed", e)
+                disconnect(statusOverride = "Connection failed")
             }
         }.start()
     }
@@ -412,14 +528,13 @@ class MainActivity : AppCompatActivity() {
             outputStream?.close()
             bluetoothSocket?.close()
         } catch (e: IOException) {
-            Log.e(TAG, "Не удалось закрыть сокет", e)
+            Log.e(TAG, "Error closing socket", e)
         }
         outputStream = null
         bluetoothSocket = null
         lastConnectedDevice = null
         runOnUiThread {
-            setUiState(UiState.DISCONNECTED, statusText = statusOverride ?: "Disconnected.")
-            spinnerAdapter.clear()
+            setUiState(UiState.DISCONNECTED, statusText = statusOverride ?: "Disconnected")
             if (pairingPanel.visibility == View.VISIBLE) {
                 scanLeDevice()
             }
@@ -428,11 +543,8 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN) == PackageManager.PERMISSION_GRANTED) {
-            if (isScanning) {
-                bluetoothLeScanner?.stopScan(leScanCallback)
-            }
-        }
+        handler.removeCallbacks(pruneRunnable)
+        try { unregisterReceiver(bluetoothReceiver) } catch (e: Exception) {}
         disconnect()
     }
 
@@ -443,6 +555,18 @@ class MainActivity : AppCompatActivity() {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
             requestBluetooth.launch(enableBtIntent)
         } else {
+            // Обновляем список сопряженных устройств при получении разрешений или включении Bluetooth
+            if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                val pairedDevices = adapter.bondedDevices
+                pairedDevices?.forEach { device ->
+                    if (device.name != null && device.name.contains(ROKI_TAG)) {
+                        if (!foundDevices.any { it.address == device.address }) {
+                            foundDevices.add(device)
+                        }
+                    }
+                }
+                deviceAdapter.notifyDataSetChanged()
+            }
             if (pairingPanel.visibility == View.VISIBLE) {
                 scanLeDevice()
             }
@@ -451,18 +575,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun checkAndRequestPermissions() {
         val permissionsToRequest = ArrayList<String>()
-        var shouldShowSettings = false
-
         for (permission in neededPermissions) {
             if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
                 permissionsToRequest.add(permission)
-                // Если система говорит, что нужно показать пояснение, значит пользователь уже отказывал
-                if (!ActivityCompat.shouldShowRequestPermissionRationale(this, permission)) {
-                    // Это может означать "Больше не спрашивать"
-                }
             }
         }
-
         if (permissionsToRequest.isNotEmpty()) {
             ActivityCompat.requestPermissions(this, permissionsToRequest.toTypedArray(), 1)
         } else {
@@ -476,20 +593,8 @@ class MainActivity : AppCompatActivity() {
             if (grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
                 onPermissionsGranted()
             } else {
-                Toast.makeText(this, "Без разрешений Bluetooth поиск невозможен. Открываю настройки...", Toast.LENGTH_LONG).show()
-                handler.postDelayed({ openAppSettings() }, 1500)
+                Toast.makeText(this, "Permissions required", Toast.LENGTH_LONG).show()
             }
-        }
-    }
-
-    private fun openAppSettings() {
-        try {
-            val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
-            val uri = android.net.Uri.fromParts("package", packageName, null)
-            intent.data = uri
-            startActivity(intent)
-        } catch (e: Exception) {
-            Log.e(TAG, "Could not open settings", e)
         }
     }
 
@@ -502,8 +607,66 @@ class MainActivity : AppCompatActivity() {
             if (pairingPanel.visibility == View.VISIBLE) {
                 scanLeDevice()
             }
-        } else {
-            Toast.makeText(this, "Для работы приложения требуется включенный Bluetooth", Toast.LENGTH_LONG).show()
         }
+    }
+
+    inner class DeviceAdapter(
+        private val devices: List<BluetoothDevice>,
+        private val onClick: (Int) -> Unit
+    ) : RecyclerView.Adapter<DeviceAdapter.ViewHolder>() {
+
+        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val indicator: View = view.findViewById(R.id.statusIndicator)
+            val name: TextView = view.findViewById(R.id.deviceName)
+            init {
+                view.setOnClickListener { 
+                    val pos = bindingAdapterPosition
+                    if (pos != RecyclerView.NO_POSITION) onClick(pos) 
+                }
+            }
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
+            val view = LayoutInflater.from(parent.context).inflate(R.layout.device_item, parent, false)
+            return ViewHolder(view)
+        }
+
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            // Установка высоты строки 16% от высоты всей панели (Pairing Screen)
+            val parentPanelHeight = pairingPanel.height
+            if (parentPanelHeight > 0) {
+                val params = holder.itemView.layoutParams
+                params.height = (parentPanelHeight * 0.16).toInt()
+                holder.itemView.layoutParams = params
+            }
+
+            val device = devices[position]
+            if (ActivityCompat.checkSelfPermission(holder.itemView.context, Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED) {
+                holder.name.text = device.name ?: "Unknown"
+                
+                val indicatorDrawable = holder.indicator.background as? GradientDrawable
+                if (device.bondState == BluetoothDevice.BOND_BONDED) {
+                    if (currentState == UiState.CONNECTED && lastConnectedDevice?.address == device.address) {
+                        indicatorDrawable?.setColor(Color.GREEN)
+                    } else {
+                        indicatorDrawable?.setColor(Color.RED)
+                    }
+                } else {
+                    indicatorDrawable?.setColor(Color.TRANSPARENT)
+                }
+            }
+
+            val background = ContextCompat.getDrawable(holder.itemView.context, R.drawable.item_background_selector) as? LayerDrawable
+            val selectionLayer = background?.findDrawableByLayerId(R.id.selection_layer) as? GradientDrawable
+            
+            if (selectedPosition == position) {
+                selectionLayer?.setColor(Color.GRAY)
+            } else {
+                selectionLayer?.setColor(Color.TRANSPARENT)
+            }
+            holder.itemView.background = background
+        }
+
+        override fun getItemCount() = devices.size
     }
 }
