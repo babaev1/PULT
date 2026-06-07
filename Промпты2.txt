@@ -1,36 +1,3 @@
-В этом приложении используются следующие органы управления:
-1.
-Кнопка «Scan» / «Disconnect» (scanButton) — используется для запуска поиска Bluetooth-устройств или разрыва соединения с подключенным устройством.
-2.
-Выпадающий список (Spinner) (devicesSpinner) — позволяет выбрать найденное Bluetooth-устройство из списка для подключения к нему.
-3.
-Два джойстика (joystickViewLeft и joystickViewRight) — специализированные элементы управления для передачи координат осей (X и Y), которые, вероятно, используются для управления движением устройства ROKI.
-4. Статусная строка под кнопкой «Scan» / «Disconnect».
-
-Необходимо сделать в приложении 2 полноэкранные панели. В первой панели надо разместить кнопку «Scan» / «Disconnect», Выпадающий список (Spinner) и Статусная строка под кнопкой «Scan» / «Disconnect».
-На второй панели надо разместить два джойстика. 
-Для перехода от первой панели ко второй нужно нажать на кнопку "←CONNECT" в левом верхнем углу панели. Для перехода от второй панели к первой нужно нажать на кнопку "PAIRING→" в правом верхнем углу. 
-
-The application currently uses the following controls:  
-1. **Scan / Disconnect button** (`scanButton`) – starts scanning for Bluetooth devices or disconnects from a connected device.  
-2. **Spinner (drop‑down list)** (`devicesSpinner`) – lets the user select one of the discovered Bluetooth devices to connect to.  
-3. **Two joysticks** (`joystickViewLeft` and `joystickViewRight`) – specialized controls that transmit X‑ and Y‑axis coordinates, presumably for operating the ROKI device.  
-4. **Status line** placed beneath the Scan / Disconnect button.
-
-**Required redesign:**  
-
-Create two full‑screen panels (screens).
-
-*Panel 1* – **Pairing screen**  
-- Place the **Scan / Disconnect button**, the **Spinner**, and the **status line** (the status line should be positioned directly below the Scan / Disconnect button).  
-- In the upper‑left corner add a navigation button labeled **←CONNECT**. Pressing this button switches to Panel 2.
-
-*Panel 2* – **Control screen**  
-- Place the two joysticks (`joystickViewLeft` and `joystickViewRight`).  
-- In the upper‑right corner add a navigation button labeled **PAIRING→**. Pressing this button returns to Panel 1.
-
-The navigation buttons enable switching between the pairing panel and the joystick control panel.
-
 Вот полное резюме проделанной работы по редизайну и технической оптимизации приложения PULT для работы на физических устройствах (в частности, Samsung Galaxy A53):
 1. Редизайн интерфейса (Две панели)
 Интерфейс был разделен на два полноэкранных режима, между которыми пользователь переключается с помощью кнопок навигации:
@@ -76,3 +43,5 @@ Bluetooth Permissions: Обновлен список разрешений (BLUET
 •
 Инициализация: Добавлен принудительный вызов requestLayout() и явная установка видимости панелей в onCreate, чтобы избежать появления пустого экрана при холодном запуске.
 Результат: Приложение имеет современный двухэкранный интерфейс, корректно отображает оранжевые кнопки управления на Samsung A53 и предоставляет пользователю понятный путь для настройки всех необходимых системных разрешений.
+
+Нужно убрать кнопку "Scan Devices" из панели Pairing Screen, переложив функцию, которая выполняется при нажатии на кнопку на факт присутствия на этой панели. Поиск новых устройств должен происходить постоянно, если эта панель активна.
