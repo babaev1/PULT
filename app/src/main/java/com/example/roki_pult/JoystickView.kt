@@ -13,6 +13,7 @@ import android.view.MotionEvent
 import android.view.View
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 class JoystickView @JvmOverloads constructor(
@@ -183,8 +184,8 @@ class JoystickView @JvmOverloads constructor(
     private fun calculateAndDispatchMove() {
         val dx = touchX - centerX
         val dy = touchY - centerY
-        val x = (dx / trenchRadius * 127).toInt().coerceIn(-127, 127)
-        val y = -(dy / trenchRadius * 127).toInt().coerceIn(-127, 127)
+        val x = (dx / trenchRadius * 127).roundToInt().coerceIn(-127, 127)
+        val y = -(dy / trenchRadius * 127).roundToInt().coerceIn(-127, 127)
         onMoveListener?.onMove(x, y)
     }
 }

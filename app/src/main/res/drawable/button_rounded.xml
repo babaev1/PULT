@@ -1,18 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Слой заливки -->
-    <item android:id="@+id/button_fill">
+    <!-- Слой внешней тени для создания эффекта выпуклости -->
+    <item
+        android:bottom="0dp"
+        android:left="2dp"
+        android:right="0dp"
+        android:top="2dp">
+        <shape android:shape="rectangle">
+            <solid android:color="#80000000" />
+            <corners android:radius="12dp" />
+        </shape>
+    </item>
+
+    <!-- Основной слой заливки (ID сохранен для управления из кода) -->
+    <item
+        android:id="@+id/button_fill"
+        android:bottom="2dp"
+        android:left="0dp"
+        android:right="2dp"
+        android:top="0dp">
         <shape android:shape="rectangle">
             <solid android:color="#9E9E9E" />
             <corners android:radius="12dp" />
         </shape>
     </item>
-    <!-- Слой контура (поверх заливки) -->
-    <item>
+
+    <!-- Слой эффектов состояния (выпуклый/вогнутый) -->
+    <item
+        android:bottom="2dp"
+        android:left="0dp"
+        android:right="2dp"
+        android:top="0dp">
+        <selector>
+            <!-- Состояние нажатия: Вогнутая кнопка -->
+            <item android:state_pressed="true">
+                <layer-list>
+                    <!-- Внутренняя тень сверху и слева -->
+                    <item>
+                        <shape android:shape="rectangle">
+                            <gradient
+                                android:angle="135"
+                                android:endColor="@android:color/transparent"
+                                android:startColor="#66000000" />
+                            <corners android:radius="12dp" />
+                        </shape>
+                    </item>
+                    <!-- Светлый блик снизу и справа (для глубины) -->
+                    <item>
+                        <shape android:shape="rectangle">
+                            <stroke
+                                android:width="2dp"
+                                android:color="#20FFFFFF" />
+                            <corners android:radius="12dp" />
+                        </shape>
+                    </item>
+                </layer-list>
+            </item>
+
+            <!-- Обычное состояние: Выпуклая кнопка -->
+            <item>
+                <layer-list>
+                    <!-- Светлый блик сверху и слева -->
+                    <item>
+                        <shape android:shape="rectangle">
+                            <gradient
+                                android:angle="135"
+                                android:endColor="@android:color/transparent"
+                                android:startColor="#66FFFFFF" />
+                            <corners android:radius="12dp" />
+                        </shape>
+                    </item>
+                    <!-- Темный контур снизу и справа -->
+                    <item>
+                        <shape android:shape="rectangle">
+                            <stroke
+                                android:width="1dp"
+                                android:color="#40000000" />
+                            <corners android:radius="12dp" />
+                        </shape>
+                    </item>
+                </layer-list>
+            </item>
+        </selector>
+    </item>
+
+    <!-- Тонкий белый контур всей кнопки -->
+    <item
+        android:bottom="2dp"
+        android:left="0dp"
+        android:right="2dp"
+        android:top="0dp">
         <shape android:shape="rectangle">
             <stroke
-                android:width="2dp"
-                android:color="#FFFFFF" />
+                android:width="1dp"
+                android:color="#40FFFFFF" />
             <solid android:color="@android:color/transparent" />
             <corners android:radius="12dp" />
         </shape>

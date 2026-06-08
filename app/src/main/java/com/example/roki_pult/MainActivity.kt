@@ -23,6 +23,9 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.os.VibrationEffect
 import android.util.Log
 import android.view.LayoutInflater
 import android.media.AudioManager
@@ -84,11 +87,13 @@ class MainActivity : AppCompatActivity() {
     private var bluetoothSocket: BluetoothSocket? = null
     private var outputStream: OutputStream? = null
     private var lastConnectedDevice: BluetoothDevice? = null
+    private var vibrator: Vibrator? = null
 
     private lateinit var devicesRecyclerView: RecyclerView
     private lateinit var btnDisconnect: Button
     private lateinit var btnPairForget: Button
     private lateinit var statusTextView: TextView
+    private lateinit var statusTextViewControl: TextView
     private lateinit var joystickViewLeft: JoystickView
     private lateinit var joystickViewRight: JoystickView
     private lateinit var scanProgressBar: ProgressBar
@@ -97,6 +102,20 @@ class MainActivity : AppCompatActivity() {
     private lateinit var controlPanel: View
     private lateinit var btnToControl: Button
     private lateinit var btnToPairing: Button
+    private lateinit var btnL1: Button
+    private lateinit var btnL2: Button
+    private lateinit var btnR1: Button
+    private lateinit var btnR2: Button
+    private lateinit var btnF1: Button
+    private lateinit var btnF2: Button
+    private lateinit var btnF3: Button
+    private lateinit var btnF4: Button
+    private lateinit var btnF5: Button
+    private lateinit var btnF6: Button
+    private lateinit var btnF7: Button
+    private lateinit var btnF8: Button
+    private lateinit var btnF9: Button
+    private lateinit var btnF10: Button
 
     private val foundDevices = ArrayList<BluetoothDevice>()
     private val lastSeenMap = ConcurrentHashMap<String, Long>()
@@ -106,6 +125,9 @@ class MainActivity : AppCompatActivity() {
     private var isScanning = false
     private val handler = Handler(Looper.getMainLooper())
     private var dataSendTimer: Timer? = null
+
+    private var isLeftAtEdge = false
+    private var isRightAtEdge = false
 
     @Volatile private var axisLeftX: Byte = 0
     @Volatile private var axisLeftY: Byte = 0
@@ -196,6 +218,14 @@ class MainActivity : AppCompatActivity() {
         // Принудительное включение звука клавиш для приложения
         volumeControlStream = AudioManager.STREAM_MUSIC
 
+        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         hideSystemUI()
 
@@ -203,6 +233,7 @@ class MainActivity : AppCompatActivity() {
         btnDisconnect = findViewById(R.id.btnDisconnect)
         btnPairForget = findViewById(R.id.btnPairForget)
         statusTextView = findViewById(R.id.statusTextView)
+        statusTextViewControl = findViewById(R.id.statusTextViewControl)
         joystickViewLeft = findViewById(R.id.joystickViewLeft)
         joystickViewRight = findViewById(R.id.joystickViewRight)
         scanProgressBar = findViewById(R.id.scanProgressBar)
@@ -211,6 +242,20 @@ class MainActivity : AppCompatActivity() {
         controlPanel = findViewById(R.id.controlPanel)
         btnToControl = findViewById(R.id.btnToControl)
         btnToPairing = findViewById(R.id.btnToPairing)
+        btnL1 = findViewById(R.id.btnL1)
+        btnL2 = findViewById(R.id.btnL2)
+        btnR1 = findViewById(R.id.btnR1)
+        btnR2 = findViewById(R.id.btnR2)
+        btnF1 = findViewById(R.id.btnF1)
+        btnF2 = findViewById(R.id.btnF2)
+        btnF3 = findViewById(R.id.btnF3)
+        btnF4 = findViewById(R.id.btnF4)
+        btnF5 = findViewById(R.id.btnF5)
+        btnF6 = findViewById(R.id.btnF6)
+        btnF7 = findViewById(R.id.btnF7)
+        btnF8 = findViewById(R.id.btnF8)
+        btnF9 = findViewById(R.id.btnF9)
+        btnF10 = findViewById(R.id.btnF10)
 
         deviceAdapter = DeviceAdapter(foundDevices) { position ->
             onDeviceSelected(position)
@@ -245,6 +290,20 @@ class MainActivity : AppCompatActivity() {
         // Установка начальных цветов для кнопок переключения панелей
         setButtonFillColor(btnToControl, COLOR_GREEN)
         setButtonFillColor(btnToPairing, COLOR_BLUE)
+        setButtonFillColor(btnL1, COLOR_GREEN)
+        setButtonFillColor(btnL2, COLOR_GREEN)
+        setButtonFillColor(btnR1, COLOR_GREEN)
+        setButtonFillColor(btnR2, COLOR_GREEN)
+        setButtonFillColor(btnF1, COLOR_GREEN)
+        setButtonFillColor(btnF2, COLOR_GREEN)
+        setButtonFillColor(btnF3, COLOR_GREEN)
+        setButtonFillColor(btnF4, COLOR_GREEN)
+        setButtonFillColor(btnF5, COLOR_GREEN)
+        setButtonFillColor(btnF6, COLOR_GREEN)
+        setButtonFillColor(btnF7, COLOR_GREEN)
+        setButtonFillColor(btnF8, COLOR_GREEN)
+        setButtonFillColor(btnF9, COLOR_GREEN)
+        setButtonFillColor(btnF10, COLOR_GREEN)
 
         val filter = IntentFilter().apply {
             addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
@@ -280,26 +339,32 @@ class MainActivity : AppCompatActivity() {
         currentState = state
         runOnUiThread {
             updateDisconnectButton()
+            updateControlButtonsState()
             deviceAdapter.notifyDataSetChanged()
             when (state) {
                 UiState.DISCONNECTED -> {
                     statusTextView.text = statusText ?: "Status: Disconnected"
+                    statusTextViewControl.text = statusText ?: "Status: Disconnected"
                     scanProgressBar.visibility = View.GONE
                 }
                 UiState.SCANNING -> {
                     statusTextView.text = "Scanning..."
+                    statusTextViewControl.text = "Scanning..."
                     scanProgressBar.visibility = View.VISIBLE
                 }
                 UiState.CONNECTING -> {
                     statusTextView.text = "Connecting to ${deviceName ?: "device"}..."
+                    statusTextViewControl.text = "Connecting to ${deviceName ?: "device"}..."
                     scanProgressBar.visibility = View.VISIBLE
                 }
                 UiState.RECONNECTING -> {
                     statusTextView.text = "Reconnecting..."
+                    statusTextViewControl.text = "Reconnecting..."
                     scanProgressBar.visibility = View.VISIBLE
                 }
                 UiState.CONNECTED -> {
                     statusTextView.text = "Connected: ${deviceName ?: "device"}"
+                    statusTextViewControl.text = "Connected: ${deviceName ?: "device"}"
                     scanProgressBar.visibility = View.GONE
                 }
             }
@@ -316,6 +381,23 @@ class MainActivity : AppCompatActivity() {
             fillDrawable?.setColor(COLOR_GRAY)
             btnDisconnect.isEnabled = false
         }
+    }
+
+    private fun updateControlButtonsState() {
+        val isConnected = currentState == UiState.CONNECTED
+        val color = if (isConnected) COLOR_GREEN else COLOR_GRAY
+        val buttons = listOf(
+            btnL1, btnL2, btnR1, btnR2,
+            btnF1, btnF2, btnF3, btnF4, btnF5,
+            btnF6, btnF7, btnF8, btnF9, btnF10
+        )
+        buttons.forEach { button ->
+            button.isEnabled = isConnected
+            setButtonFillColor(button, color)
+        }
+        // Также деактивируем джойстики для наглядности
+        joystickViewLeft.isEnabled = isConnected
+        joystickViewRight.isEnabled = isConnected
     }
 
     private fun updatePairForgetButton() {
@@ -411,6 +493,12 @@ class MainActivity : AppCompatActivity() {
             override fun onMove(x: Int, y: Int) {
                 axisLeftX = x.toByte()
                 axisLeftY = y.toByte()
+                // Срабатывает, если джойстик прижат к любому краю
+                val currentlyAtEdge = Math.abs(x) >= 126 || Math.abs(y) >= 126
+                if (currentlyAtEdge != isLeftAtEdge) {
+                    isLeftAtEdge = currentlyAtEdge
+                    updateVibration()
+                }
             }
         })
 
@@ -418,8 +506,30 @@ class MainActivity : AppCompatActivity() {
             override fun onMove(x: Int, y: Int) {
                 axisRightX = x.toByte()
                 axisRightY = y.toByte()
+                val currentlyAtEdge = Math.abs(x) >= 126 || Math.abs(y) >= 126
+                if (currentlyAtEdge != isRightAtEdge) {
+                    isRightAtEdge = currentlyAtEdge
+                    updateVibration()
+                }
             }
         })
+    }
+
+    private fun updateVibration() {
+        val atEdge = isLeftAtEdge || isRightAtEdge
+        if (atEdge) {
+            if (vibrator?.hasVibrator() == true) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    val effect = VibrationEffect.createWaveform(longArrayOf(0, 100), 0)
+                    vibrator?.vibrate(effect)
+                } else {
+                    @Suppress("DEPRECATION")
+                    vibrator?.vibrate(longArrayOf(0, 100), 0)
+                }
+            }
+        } else {
+            vibrator?.cancel()
+        }
     }
 
     private fun unpairDevice(device: BluetoothDevice) {
