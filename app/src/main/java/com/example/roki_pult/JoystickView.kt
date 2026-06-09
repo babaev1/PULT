@@ -172,12 +172,20 @@ class JoystickView @JvmOverloads constructor(
                 calculateAndDispatchMove()
             }
             MotionEvent.ACTION_UP -> {
+                if (distance < thumbRadius * 1.5f) {
+                    performClick()
+                }
                 touchX = centerX
                 touchY = centerY
                 calculateAndDispatchMove()
             }
         }
         invalidate()
+        return true
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
         return true
     }
 

@@ -128,23 +128,9 @@
             android:background="@drawable/button_rounded"
             android:text="L1"
             android:textColor="@android:color/white"
-            app:layout_constraintHeight_percent="0.16"
+            app:layout_constraintHeight_percent="0.14"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintWidth_percent="0.15" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnL2"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginStart="16dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/button_rounded"
-            android:text="L2"
-            android:textColor="@android:color/white"
-            app:layout_constraintHeight_percent="0.16"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/btnL1"
             app:layout_constraintWidth_percent="0.15" />
 
         <androidx.appcompat.widget.AppCompatButton
@@ -157,25 +143,11 @@
             android:text="R1"
             android:textColor="@android:color/white"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHeight_percent="0.16"
+            app:layout_constraintHeight_percent="0.14"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintWidth_percent="0.15" />
 
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnR2"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:layout_marginEnd="16dp"
-            android:layout_marginTop="8dp"
-            android:background="@drawable/button_rounded"
-            android:text="R2"
-            android:textColor="@android:color/white"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintHeight_percent="0.16"
-            app:layout_constraintTop_toBottomOf="@id/btnR1"
-            app:layout_constraintWidth_percent="0.15" />
-
-        <!-- F1-F5 Column -->
+        <!-- Left Column: F1, F3, F5, F7, F9 -->
         <androidx.appcompat.widget.AppCompatButton
             android:id="@+id/btnF1"
             android:layout_width="0dp"
@@ -183,26 +155,12 @@
             android:background="@drawable/button_rounded"
             android:text="F1"
             android:textColor="@android:color/white"
-            app:layout_constraintBottom_toTopOf="@+id/btnF2"
-            app:layout_constraintEnd_toStartOf="@+id/btnToPairing"
-            app:layout_constraintHeight_percent="0.15"
-            app:layout_constraintStart_toEndOf="@+id/btnL1"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_chainStyle="spread"
-            app:layout_constraintWidth_percent="0.20" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnF2"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@drawable/button_rounded"
-            android:text="F2"
-            android:textColor="@android:color/white"
             app:layout_constraintBottom_toTopOf="@+id/btnF3"
             app:layout_constraintEnd_toStartOf="@+id/btnToPairing"
             app:layout_constraintHeight_percent="0.15"
-            app:layout_constraintStart_toEndOf="@+id/btnL1"
-            app:layout_constraintTop_toBottomOf="@+id/btnF1"
+            app:layout_constraintStart_toEndOf="@+id/diamondButtonsLeft"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="spread"
             app:layout_constraintWidth_percent="0.20" />
 
         <androidx.appcompat.widget.AppCompatButton
@@ -212,25 +170,11 @@
             android:background="@drawable/button_rounded"
             android:text="F3"
             android:textColor="@android:color/white"
-            app:layout_constraintBottom_toTopOf="@+id/btnF4"
-            app:layout_constraintEnd_toStartOf="@+id/btnToPairing"
-            app:layout_constraintHeight_percent="0.15"
-            app:layout_constraintStart_toEndOf="@+id/btnL1"
-            app:layout_constraintTop_toBottomOf="@+id/btnF2"
-            app:layout_constraintWidth_percent="0.20" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnF4"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@drawable/button_rounded"
-            android:text="F4"
-            android:textColor="@android:color/white"
             app:layout_constraintBottom_toTopOf="@+id/btnF5"
             app:layout_constraintEnd_toStartOf="@+id/btnToPairing"
             app:layout_constraintHeight_percent="0.15"
-            app:layout_constraintStart_toEndOf="@+id/btnL1"
-            app:layout_constraintTop_toBottomOf="@+id/btnF3"
+            app:layout_constraintStart_toEndOf="@+id/diamondButtonsLeft"
+            app:layout_constraintTop_toBottomOf="@+id/btnF1"
             app:layout_constraintWidth_percent="0.20" />
 
         <androidx.appcompat.widget.AppCompatButton
@@ -240,27 +184,11 @@
             android:background="@drawable/button_rounded"
             android:text="F5"
             android:textColor="@android:color/white"
-            app:layout_constraintBottom_toTopOf="@+id/statusTextViewControl"
+            app:layout_constraintBottom_toTopOf="@+id/btnF7"
             app:layout_constraintEnd_toStartOf="@+id/btnToPairing"
             app:layout_constraintHeight_percent="0.15"
-            app:layout_constraintStart_toEndOf="@+id/btnL1"
-            app:layout_constraintTop_toBottomOf="@+id/btnF4"
-            app:layout_constraintWidth_percent="0.20" />
-
-        <!-- F6-F10 Column -->
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnF6"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@drawable/button_rounded"
-            android:text="F6"
-            android:textColor="@android:color/white"
-            app:layout_constraintBottom_toTopOf="@+id/btnF7"
-            app:layout_constraintEnd_toStartOf="@+id/btnR1"
-            app:layout_constraintHeight_percent="0.15"
-            app:layout_constraintStart_toEndOf="@+id/btnToPairing"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintVertical_chainStyle="spread"
+            app:layout_constraintStart_toEndOf="@+id/diamondButtonsLeft"
+            app:layout_constraintTop_toBottomOf="@+id/btnF3"
             app:layout_constraintWidth_percent="0.20" />
 
         <androidx.appcompat.widget.AppCompatButton
@@ -270,25 +198,11 @@
             android:background="@drawable/button_rounded"
             android:text="F7"
             android:textColor="@android:color/white"
-            app:layout_constraintBottom_toTopOf="@+id/btnF8"
-            app:layout_constraintEnd_toStartOf="@+id/btnR1"
-            app:layout_constraintHeight_percent="0.15"
-            app:layout_constraintStart_toEndOf="@+id/btnToPairing"
-            app:layout_constraintTop_toBottomOf="@+id/btnF6"
-            app:layout_constraintWidth_percent="0.20" />
-
-        <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnF8"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:background="@drawable/button_rounded"
-            android:text="F8"
-            android:textColor="@android:color/white"
             app:layout_constraintBottom_toTopOf="@+id/btnF9"
-            app:layout_constraintEnd_toStartOf="@+id/btnR1"
+            app:layout_constraintEnd_toStartOf="@+id/btnToPairing"
             app:layout_constraintHeight_percent="0.15"
-            app:layout_constraintStart_toEndOf="@+id/btnToPairing"
-            app:layout_constraintTop_toBottomOf="@+id/btnF7"
+            app:layout_constraintStart_toEndOf="@+id/diamondButtonsLeft"
+            app:layout_constraintTop_toBottomOf="@+id/btnF5"
             app:layout_constraintWidth_percent="0.20" />
 
         <androidx.appcompat.widget.AppCompatButton
@@ -298,11 +212,69 @@
             android:background="@drawable/button_rounded"
             android:text="F9"
             android:textColor="@android:color/white"
-            app:layout_constraintBottom_toTopOf="@+id/btnF10"
-            app:layout_constraintEnd_toStartOf="@+id/btnR1"
+            app:layout_constraintBottom_toTopOf="@+id/statusTextViewControl"
+            app:layout_constraintEnd_toStartOf="@+id/btnToPairing"
+            app:layout_constraintHeight_percent="0.15"
+            app:layout_constraintStart_toEndOf="@+id/diamondButtonsLeft"
+            app:layout_constraintTop_toBottomOf="@+id/btnF7"
+            app:layout_constraintWidth_percent="0.20" />
+
+        <!-- Right Column: F2, F4, F6, F8, F10 -->
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnF2"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/button_rounded"
+            android:text="F2"
+            android:textColor="@android:color/white"
+            app:layout_constraintBottom_toTopOf="@+id/btnF4"
+            app:layout_constraintEnd_toStartOf="@+id/diamondButtons"
             app:layout_constraintHeight_percent="0.15"
             app:layout_constraintStart_toEndOf="@+id/btnToPairing"
-            app:layout_constraintTop_toBottomOf="@+id/btnF8"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintVertical_chainStyle="spread"
+            app:layout_constraintWidth_percent="0.20" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnF4"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/button_rounded"
+            android:text="F4"
+            android:textColor="@android:color/white"
+            app:layout_constraintBottom_toTopOf="@+id/btnF6"
+            app:layout_constraintEnd_toStartOf="@+id/diamondButtons"
+            app:layout_constraintHeight_percent="0.15"
+            app:layout_constraintStart_toEndOf="@+id/btnToPairing"
+            app:layout_constraintTop_toBottomOf="@+id/btnF2"
+            app:layout_constraintWidth_percent="0.20" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnF6"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/button_rounded"
+            android:text="F6"
+            android:textColor="@android:color/white"
+            app:layout_constraintBottom_toTopOf="@+id/btnF8"
+            app:layout_constraintEnd_toStartOf="@+id/diamondButtons"
+            app:layout_constraintHeight_percent="0.15"
+            app:layout_constraintStart_toEndOf="@+id/btnToPairing"
+            app:layout_constraintTop_toBottomOf="@+id/btnF4"
+            app:layout_constraintWidth_percent="0.20" />
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnF8"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:background="@drawable/button_rounded"
+            android:text="F8"
+            android:textColor="@android:color/white"
+            app:layout_constraintBottom_toTopOf="@+id/btnF10"
+            app:layout_constraintEnd_toStartOf="@+id/diamondButtons"
+            app:layout_constraintHeight_percent="0.15"
+            app:layout_constraintStart_toEndOf="@+id/btnToPairing"
+            app:layout_constraintTop_toBottomOf="@+id/btnF6"
             app:layout_constraintWidth_percent="0.20" />
 
         <androidx.appcompat.widget.AppCompatButton
@@ -313,10 +285,10 @@
             android:text="F10"
             android:textColor="@android:color/white"
             app:layout_constraintBottom_toTopOf="@+id/statusTextViewControl"
-            app:layout_constraintEnd_toStartOf="@+id/btnR1"
+            app:layout_constraintEnd_toStartOf="@+id/diamondButtons"
             app:layout_constraintHeight_percent="0.15"
             app:layout_constraintStart_toEndOf="@+id/btnToPairing"
-            app:layout_constraintTop_toBottomOf="@+id/btnF9"
+            app:layout_constraintTop_toBottomOf="@+id/btnF8"
             app:layout_constraintWidth_percent="0.20" />
 
         <TextView
@@ -340,6 +312,76 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintWidth_percent="0.2" />
 
+        <!-- Левый блок кнопок (D-pad) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/diamondButtonsLeft"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toTopOf="@id/joystickViewLeft"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btnL1"
+            app:layout_constraintWidth_percent="0.20"
+            app:layout_constraintDimensionRatio="1:1"
+            android:layout_marginStart="0dp">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnPadUp"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/button_circle"
+                android:text="▲"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                app:layout_constraintHeight_percent="0.4"
+                app:layout_constraintWidth_percent="0.4"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnPadLeft"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/button_circle"
+                android:text="◄"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                app:layout_constraintHeight_percent="0.4"
+                app:layout_constraintWidth_percent="0.4"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnPadRight"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/button_circle"
+                android:text="►"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                app:layout_constraintHeight_percent="0.4"
+                app:layout_constraintWidth_percent="0.4"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnPadDown"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/button_circle"
+                android:text="▼"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                app:layout_constraintHeight_percent="0.4"
+                app:layout_constraintWidth_percent="0.4"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+
         <!-- Правый джойстик -->
         <com.example.roki_pult.JoystickView
             android:id="@+id/joystickViewRight"
@@ -348,7 +390,77 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintDimensionRatio="1:1"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintWidth_percent="0.2" />
+            app:layout_constraintWidth_percent="0.20" />
+
+        <!-- Алмазный блок кнопок (Y, X, A, B) -->
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:id="@+id/diamondButtons"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            app:layout_constraintBottom_toTopOf="@id/joystickViewRight"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/btnR1"
+            app:layout_constraintWidth_percent="0.20"
+            app:layout_constraintDimensionRatio="1:1"
+            android:layout_marginEnd="0dp">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnX"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/button_circle"
+                android:text="X"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                app:layout_constraintHeight_percent="0.4"
+                app:layout_constraintWidth_percent="0.4"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnY"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/button_circle"
+                android:text="Y"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                app:layout_constraintHeight_percent="0.4"
+                app:layout_constraintWidth_percent="0.4"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnA"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/button_circle"
+                android:text="A"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                app:layout_constraintHeight_percent="0.4"
+                app:layout_constraintWidth_percent="0.4"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintBottom_toBottomOf="parent" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnB"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/button_circle"
+                android:text="B"
+                android:textColor="@android:color/white"
+                android:textSize="18sp"
+                app:layout_constraintHeight_percent="0.4"
+                app:layout_constraintWidth_percent="0.4"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

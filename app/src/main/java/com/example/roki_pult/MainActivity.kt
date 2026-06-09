@@ -29,6 +29,7 @@ import android.os.VibrationEffect
 import android.util.Log
 import android.view.LayoutInflater
 import android.media.AudioManager
+import android.view.MotionEvent
 import android.view.SoundEffectConstants
 import android.view.View
 import android.view.ViewGroup
@@ -103,9 +104,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnToControl: Button
     private lateinit var btnToPairing: Button
     private lateinit var btnL1: Button
-    private lateinit var btnL2: Button
     private lateinit var btnR1: Button
-    private lateinit var btnR2: Button
     private lateinit var btnF1: Button
     private lateinit var btnF2: Button
     private lateinit var btnF3: Button
@@ -116,6 +115,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnF8: Button
     private lateinit var btnF9: Button
     private lateinit var btnF10: Button
+    private lateinit var btnA: Button
+    private lateinit var btnB: Button
+    private lateinit var btnX: Button
+    private lateinit var btnY: Button
+    private lateinit var btnPadUp: Button
+    private lateinit var btnPadDown: Button
+    private lateinit var btnPadLeft: Button
+    private lateinit var btnPadRight: Button
 
     private val foundDevices = ArrayList<BluetoothDevice>()
     private val lastSeenMap = ConcurrentHashMap<String, Long>()
@@ -133,6 +140,18 @@ class MainActivity : AppCompatActivity() {
     @Volatile private var axisLeftY: Byte = 0
     @Volatile private var axisRightX: Byte = 0
     @Volatile private var axisRightY: Byte = 0
+
+    @Volatile private var currentButtonsMask: Int = 0
+    @Volatile private var joystickButtonsLatched: Int = 0
+
+    private val fButtonLabels = mutableMapOf<Int, String>(
+        3 to "KICK_LEFT",
+        4 to "KICK_RIGHT",
+        5 to "GETUP",
+        6 to "SPLITS",
+        7 to "JUMP",
+        8 to "BEEP"
+    )
 
     private val messageOut = CsMessageOut()
 
@@ -243,9 +262,7 @@ class MainActivity : AppCompatActivity() {
         btnToControl = findViewById(R.id.btnToControl)
         btnToPairing = findViewById(R.id.btnToPairing)
         btnL1 = findViewById(R.id.btnL1)
-        btnL2 = findViewById(R.id.btnL2)
         btnR1 = findViewById(R.id.btnR1)
-        btnR2 = findViewById(R.id.btnR2)
         btnF1 = findViewById(R.id.btnF1)
         btnF2 = findViewById(R.id.btnF2)
         btnF3 = findViewById(R.id.btnF3)
@@ -256,6 +273,16 @@ class MainActivity : AppCompatActivity() {
         btnF8 = findViewById(R.id.btnF8)
         btnF9 = findViewById(R.id.btnF9)
         btnF10 = findViewById(R.id.btnF10)
+        btnA = findViewById(R.id.btnA)
+        btnB = findViewById(R.id.btnB)
+        btnX = findViewById(R.id.btnX)
+        btnY = findViewById(R.id.btnY)
+        btnPadUp = findViewById(R.id.btnPadUp)
+        btnPadDown = findViewById(R.id.btnPadDown)
+        btnPadLeft = findViewById(R.id.btnPadLeft)
+        btnPadRight = findViewById(R.id.btnPadRight)
+
+        updateFButtonLabels()
 
         deviceAdapter = DeviceAdapter(foundDevices) { position ->
             onDeviceSelected(position)
@@ -291,9 +318,7 @@ class MainActivity : AppCompatActivity() {
         setButtonFillColor(btnToControl, COLOR_GREEN)
         setButtonFillColor(btnToPairing, COLOR_BLUE)
         setButtonFillColor(btnL1, COLOR_GREEN)
-        setButtonFillColor(btnL2, COLOR_GREEN)
         setButtonFillColor(btnR1, COLOR_GREEN)
-        setButtonFillColor(btnR2, COLOR_GREEN)
         setButtonFillColor(btnF1, COLOR_GREEN)
         setButtonFillColor(btnF2, COLOR_GREEN)
         setButtonFillColor(btnF3, COLOR_GREEN)
@@ -304,6 +329,14 @@ class MainActivity : AppCompatActivity() {
         setButtonFillColor(btnF8, COLOR_GREEN)
         setButtonFillColor(btnF9, COLOR_GREEN)
         setButtonFillColor(btnF10, COLOR_GREEN)
+        setButtonFillColor(btnA, COLOR_BLUE)
+        setButtonFillColor(btnB, COLOR_BLUE)
+        setButtonFillColor(btnX, COLOR_BLUE)
+        setButtonFillColor(btnY, COLOR_BLUE)
+        setButtonFillColor(btnPadUp, COLOR_BLUE)
+        setButtonFillColor(btnPadDown, COLOR_BLUE)
+        setButtonFillColor(btnPadLeft, COLOR_BLUE)
+        setButtonFillColor(btnPadRight, COLOR_BLUE)
 
         val filter = IntentFilter().apply {
             addAction(BluetoothDevice.ACTION_BOND_STATE_CHANGED)
@@ -318,6 +351,17 @@ class MainActivity : AppCompatActivity() {
         
         updatePairForgetButton()
         updateDisconnectButton()
+    }
+
+    private fun updateFButtonLabels() {
+        val fButtons = mapOf(
+            1 to btnF1, 2 to btnF2, 3 to btnF3, 4 to btnF4, 5 to btnF5,
+            6 to btnF6, 7 to btnF7, 8 to btnF8, 9 to btnF9, 10 to btnF10
+        )
+        fButtons.forEach { (index, button) ->
+            val label = fButtonLabels[index]
+            button.text = if (label.isNullOrEmpty()) "F$index" else "F$index : $label"
+        }
     }
 
     private fun hideSystemUI() {
@@ -387,9 +431,11 @@ class MainActivity : AppCompatActivity() {
         val isConnected = currentState == UiState.CONNECTED
         val color = if (isConnected) COLOR_GREEN else COLOR_GRAY
         val buttons = listOf(
-            btnL1, btnL2, btnR1, btnR2,
+            btnL1, btnR1,
             btnF1, btnF2, btnF3, btnF4, btnF5,
-            btnF6, btnF7, btnF8, btnF9, btnF10
+            btnF6, btnF7, btnF8, btnF9, btnF10,
+            btnA, btnB, btnX, btnY,
+            btnPadUp, btnPadDown, btnPadLeft, btnPadRight
         )
         buttons.forEach { button ->
             button.isEnabled = isConnected
@@ -449,6 +495,75 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("ClickableViewAccessibility")
     private fun setupUIListeners() {
+        val controlButtons = listOf(
+            btnL1, btnR1,
+            btnF1, btnF2, btnF3, btnF4, btnF5,
+            btnF6, btnF7, btnF8, btnF9, btnF10,
+            btnA, btnB, btnX, btnY,
+            btnPadUp, btnPadDown, btnPadLeft, btnPadRight
+        )
+
+        val buttonTouchListener = View.OnTouchListener { v, event ->
+            val bit = when (v.id) {
+                R.id.btnF1 -> 16
+                R.id.btnF2 -> 17
+                R.id.btnF3 -> 19
+                R.id.btnF4 -> 18
+                R.id.btnF5 -> 20
+                R.id.btnF6 -> 21
+                R.id.btnF7 -> 22
+                R.id.btnF8 -> 23
+                R.id.btnF9 -> 24
+                R.id.btnF10 -> 25
+                R.id.btnL1 -> 4
+                R.id.btnR1 -> 5
+                R.id.btnA -> 0
+                R.id.btnB -> 1
+                R.id.btnX -> 2
+                R.id.btnY -> 3
+                R.id.btnPadUp -> 12
+                R.id.btnPadRight -> 13
+                R.id.btnPadDown -> 14
+                R.id.btnPadLeft -> 15
+                else -> -1
+            }
+            if (bit != -1) {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        currentButtonsMask = currentButtonsMask or (1 shl bit)
+                        v.isPressed = true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        currentButtonsMask = currentButtonsMask and (1 shl bit).inv()
+                        v.isPressed = false
+                    }
+                }
+            }
+            false
+        }
+
+        controlButtons.forEach { it.setOnTouchListener(buttonTouchListener) }
+
+        joystickViewLeft.setOnClickListener {
+            joystickButtonsLatched = joystickButtonsLatched or (1 shl 8)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
+        }
+
+        joystickViewRight.setOnClickListener {
+            joystickButtonsLatched = joystickButtonsLatched or (1 shl 9)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                vibrator?.vibrate(VibrationEffect.createOneShot(50, VibrationEffect.DEFAULT_AMPLITUDE))
+            } else {
+                @Suppress("DEPRECATION")
+                vibrator?.vibrate(50)
+            }
+        }
+
         btnToControl.setOnClickListener {
             it.isSoundEffectsEnabled = true
             it.playSoundEffect(SoundEffectConstants.CLICK)
@@ -560,7 +675,11 @@ class MainActivity : AppCompatActivity() {
         if (outputStream != null) {
             try {
                 messageOut.hostBeginQuery('R')
-                messageOut.addInt32(0)
+                
+                val finalMask = currentButtonsMask or joystickButtonsLatched
+                messageOut.addInt32(finalMask)
+                joystickButtonsLatched = 0 // Сбрасываем "защелкнутые" нажатия джойстиков
+
                 messageOut.addInt8(axisLeftX.toInt())
                 messageOut.addInt8(axisLeftY.toInt())
                 messageOut.addInt8(axisRightX.toInt())

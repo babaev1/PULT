@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Слой внешней тени -->
+    <item
+        android:bottom="0dp"
+        android:left="2dp"
+        android:right="0dp"
+        android:top="2dp">
+        <shape android:shape="oval">
+            <solid android:color="#80000000" />
+        </shape>
+    </item>
+
+    <!-- Основной слой заливки -->
+    <item
+        android:id="@+id/button_fill"
+        android:bottom="2dp"
+        android:left="0dp"
+        android:right="2dp"
+        android:top="0dp">
+        <shape android:shape="oval">
+            <solid android:color="#9E9E9E" />
+        </shape>
+    </item>
+
+    <!-- Слой эффектов состояния -->
+    <item
+        android:bottom="2dp"
+        android:left="0dp"
+        android:right="2dp"
+        android:top="0dp">
+        <selector>
+            <item android:state_pressed="true">
+                <shape android:shape="oval">
+                    <gradient
+                        android:angle="135"
+                        android:endColor="@android:color/transparent"
+                        android:startColor="#66000000" />
+                </shape>
+            </item>
+            <item>
+                <shape android:shape="oval">
+                    <gradient
+                        android:angle="135"
+                        android:endColor="@android:color/transparent"
+                        android:startColor="#66FFFFFF" />
+                </shape>
+            </item>
+        </selector>
+    </item>
+
+    <!-- Тонкий белый контур -->
+    <item
+        android:bottom="2dp"
+        android:left="0dp"
+        android:right="2dp"
+        android:top="0dp">
+        <shape android:shape="oval">
+            <stroke
+                android:width="1dp"
+                android:color="#40FFFFFF" />
+            <solid android:color="@android:color/transparent" />
+        </shape>
+    </item>
+</layer-list>
